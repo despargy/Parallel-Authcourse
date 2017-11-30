@@ -1,0 +1,10 @@
+
+Results
+serial_qsort/qsort_serial
+serial_bitonic/bitonic_serial
+openMP/openMP_parallel
+CilkPlus/cilkplus_parallel
+pthreads/pthreads_parallel
+omp-hands-on-SC08.pdf
+bitonic-pthreads.pdf
+*.swp
