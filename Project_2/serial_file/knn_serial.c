@@ -16,7 +16,7 @@ int D;
 double **a;	//array random distance
 double **kDist;	//array distance of k closer points
 int **kId;	//array id of k closer points
-
+//char *name;
 void init(void);
 void knn(void);
 int binarySearch(int item, int low, int high, int j);
@@ -32,6 +32,8 @@ int main(int argc, char **argv) {
   k = atoi(argv[1]); 
   N = atoi(argv[2]);
   D = atoi(argv[3]);
+//  name ="corpus.txt";
+//  printf("%s",name);
   a = (double **) malloc(N * sizeof(double*));	//malloc a[][]
   for(int i = 0; i < N; i++) {
     a[i] = (double *) malloc(D * sizeof(double));
@@ -51,7 +53,10 @@ int main(int argc, char **argv) {
 
   knn();
 
-  printf("\n");
+
+
+
+/*  printf("\n");
   for (int i = 0; i < k; i++) {             //check printf
     for (int j = 0; j < N; j++) {
      printf("%lf\t", kDist[i][j]);
@@ -67,26 +72,37 @@ int main(int argc, char **argv) {
   }
   printf("\n");
 
+*/
+int i,j;
+FILE *printfile = fopen( "kDresultsArray.txt", "w+");
+  for (i = 0; i < N; i++) {             //check printf
+    for (j = 0; j < k; j++) {
+    fprintf(printfile, "%lf\t",kDist[j][i]);
+    }
+    fprintf(printfile, "\n");
+  }
+
+
 
 
 }
 
 void init() {		//initialize the data array about distance
   int i,j;
+  FILE *file = fopen( "corpus.txt", "r" );
   for (i = 0; i < N; i++) { 
     for (j = 0; j < D; j++) {
-      a[i][j] = ((double)rand()/(double)(RAND_MAX) * 156.7 ); 
+     fscanf(file, "%lf", &a[i][j]);
     }
   }
+  fclose(file);
+/*FILE *printfile = fopen( name, "w");
   for (i = 0; i < N; i++) {		//check printf
     for (j = 0; j < D; j++) {
-     printf("%lf\t", a[i][j]);
+    fprintf(printfile, "%lf\t",&a[i][j]);
     }
-    printf("\n");
-  }
-  printf("\n");
-
-
+    fprintf(printfile, "\n");
+  }*/
 }
 
 void knn() {
@@ -94,7 +110,7 @@ void knn() {
   for (j = 0; j < N; j++) { 	//initialazation kDist array
    for (i = 0; i < k; i++) {
      kDist[i][j] = DBL_MAX;	//max double = DBL_MAX
-     kId[i][j] = N + 1;
+     kId[i][j] = -1;
    }
   }
   for(j = 0; j < N; j++){
