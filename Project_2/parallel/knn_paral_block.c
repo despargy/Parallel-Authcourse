@@ -151,7 +151,16 @@ void init() {		//initialize the data array about distance
 void knn() {
   int i, j, c, e, p, t;
   int next, prev;
-  MPI_Status status;
+  MPI_Request send_request,recv_request;
+  MPI_Status send_status, recv_status;
+
+  next = id_p + 1;
+  prev = id_p - 1;
+  if (id_p == 0) prev = num_p-1;
+  if (id_p == (num_p-1)) next = 0;
+  MPI_Isend(&compMatrix[0][0], chunk*D, MPI_DOUBLE, next, 1, MPI_COMM_WORLD, &send_request);
+  MPI_Irecv(&bufferMatrix[0][0], chunk*D, MPI_DOUBLE, prev, 1, MPI_COMM_WORLD, &recv_request) ;
+
   for(t = 0; t < num_p; t++){
     for(j = 0; j < chunk; j++){
       for(c= 0; c < chunk; c++){
@@ -168,26 +177,18 @@ void knn() {
         }
       }
     }
-    if(t == (num_p-1)) continue;
-    next = id_p + 1;
-    prev = id_p - 1;
-    if (id_p == 0) prev = num_p-1;
-    if (id_p == (num_p-1)) next = 0;
-    if (id_p == 0){
-      MPI_Send(&compMatrix[0][0], chunk*D, MPI_DOUBLE, next, 1, MPI_COMM_WORLD);
-      MPI_Recv(&bufferMatrix[0][0], chunk*D, MPI_DOUBLE, prev, 1, MPI_COMM_WORLD, &status) ;
-    }
-    else{
-      MPI_Recv(&bufferMatrix[0][0], chunk*D, MPI_DOUBLE, prev, 1, MPI_COMM_WORLD, &status) ;
-      MPI_Send(&compMatrix[0][0], chunk*D, MPI_DOUBLE, next, 1, MPI_COMM_WORLD);
-    }
+//    if(t == (num_p-1)) continue;
+    MPI_Wait(&send_request,&send_status);
+    MPI_Wait(&recv_request,&recv_status);
+
     for(i = 0; i<chunk; i++) {
       for(j = 0; j<D; j++) {
        compMatrix[i][j] = bufferMatrix[i][j];
-      }
+      } 
     }
 
   }
+
 }
 
 
