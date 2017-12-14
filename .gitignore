@@ -1,3 +1,9 @@
 8491.zip
 ergasiaallwn/*
-
+Project_2/parallel/nkResultsBlock.txt
+Project_2/parallel/nkResultsUNblock.txt
+Project_2/parallel/validated.txt
+Project_2/serial_file/nkResultsSerial.txt
+Project_2/serial_file/validated.txt
+Project_2/data/*
+*.swp

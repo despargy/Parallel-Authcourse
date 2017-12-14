@@ -16,11 +16,13 @@ int D;
 double **a;	//array random distance
 double **kDist;	//array distance of k closer points
 int **kId;	//array id of k closer points
-//char *name;
 void init(void);
 void knn(void);
 int binarySearch(int item, int low, int high, int j);
 void shift(int p, int j);
+struct timeval startwtime, endwtime;
+double seq_time;
+void validation();
 /* main */
 int main(int argc, char **argv) {
 
@@ -32,49 +34,18 @@ int main(int argc, char **argv) {
   k = atoi(argv[1]); 
   N = atoi(argv[2]);
   D = atoi(argv[3]);
-//  name ="corpus.txt";
-//  printf("%s",name);
-  a = (double **) malloc(N * sizeof(double*));	//malloc a[][]
-  for(int i = 0; i < N; i++) {
-    a[i] = (double *) malloc(D * sizeof(double));
-  }
 
-  kDist = (double **) malloc(k * sizeof(double*));	//malloc kDist[][]
-  for(int i = 0; i < k; i++) {
-    kDist[i] = (double *) malloc(N * sizeof(double));
-  }
-  kId = (int **) malloc(k * sizeof(int*));	//malloc kId[][]
-  for(int i = 0; i < k; i++) {
-    kId[i] = (int *) malloc(N * sizeof(int));
-  }
-
-
-  init();	//instead of data file
-
+  init();	//initialize
+  gettimeofday (&startwtime, NULL);
   knn();
+  gettimeofday (&endwtime, NULL);
+
+  seq_time = (double)((endwtime.tv_usec - startwtime.tv_usec)/1.0e6 + endwtime.tv_sec - startwtime.tv_sec);
+  printf("Knn serial all clock time = %f\n", seq_time);
 
 
-
-
-/*  printf("\n");
-  for (int i = 0; i < k; i++) {             //check printf
-    for (int j = 0; j < N; j++) {
-     printf("%lf\t", kDist[i][j]);
-    }
-    printf("\n");
-  }
-  printf("\n");
-   for (int i = 0; i < k; i++) {             //check printf
-    for (int j = 0; j < N; j++) {
-     printf("%d\t", kId[i][j]);
-    }
-    printf("\n");
-  }
-  printf("\n");
-
-*/
-int i,j;
-FILE *printfile = fopen( "kDresultsArray.txt", "w+");
+  int i,j;
+  FILE *printfile = fopen( "nkResultsSerial.txt", "w+");
   for (i = 0; i < N; i++) {             //check printf
     for (j = 0; j < k; j++) {
     fprintf(printfile, "%lf\t",kDist[j][i]);
@@ -82,27 +53,34 @@ FILE *printfile = fopen( "kDresultsArray.txt", "w+");
     fprintf(printfile, "\n");
   }
 
-
-
+  printf("\n");
+  validation();
 
 }
 
 void init() {		//initialize the data array about distance
-  int i,j;
+  int i,j,x;
+  a = (double **) malloc(N * sizeof(double*));  //malloc a[][]
+  for(i = 0; i < N; i++) {
+    a[i] = (double *) malloc(D * sizeof(double));
+  }
+
+  kDist = (double **) malloc(k * sizeof(double*));      //malloc kDist[][]
+  for( i = 0; i < k; i++) {
+    kDist[i] = (double *) malloc(N * sizeof(double));
+  }
+  kId = (int **) malloc(k * sizeof(int*));      //malloc kId[][]
+  for(i = 0; i < k; i++) {
+    kId[i] = (int *) malloc(N * sizeof(int));
+  }
   FILE *file = fopen( "corpus.txt", "r" );
   for (i = 0; i < N; i++) { 
     for (j = 0; j < D; j++) {
-     fscanf(file, "%lf", &a[i][j]);
+     x = fscanf(file, "%lf", &a[i][j]);
     }
   }
   fclose(file);
-/*FILE *printfile = fopen( name, "w");
-  for (i = 0; i < N; i++) {		//check printf
-    for (j = 0; j < D; j++) {
-    fprintf(printfile, "%lf\t",&a[i][j]);
-    }
-    fprintf(printfile, "\n");
-  }*/
+
 }
 
 void knn() {
@@ -152,3 +130,37 @@ void shift(int p,int j){
    kId[i][j] = kId[i-1][j];
  }
 }
+
+
+void validation(){
+  FILE *fp1 = fopen( "validated.txt", "r" );
+  FILE *fp2 = fopen( "nkResultsSerial.txt", "r");
+  double d1,d2,dif;
+  double er=0.001;
+  int i,x,y,ok=1;
+  printf("ok\n");
+
+  for(i = 0; i < k*D; i++){
+    x = fscanf(fp1,"%lf", &d1);
+    y = fscanf(fp2,"%lf", &d2);
+    dif=(d1 - d2);
+    if (dif < 0) dif=dif*(-1);
+    if(dif>er){
+      ok = 0;
+      break;
+    } 
+  }
+  if(ok){
+    printf("Validation done: PASSed\n");
+  }
+  else {
+    printf("Validation done: FAILed\n");
+  }
+ 
+  fclose(fp1);
+  fclose(fp2);
+
+
+}
+
+

@@ -2,7 +2,7 @@
 	Parallel computing
   Project 2,HMMY Nov 2017
   Despina-Ekaterini Argiropoulos        8491
-
+  UNBLOCK-Paral
 */
 
 #include <stdio.h>
@@ -26,7 +26,10 @@ int binarySearch(int item, int low, int high, int j);
 void shift(int p, int j);
 int id_p;
 int num_p;
-
+struct timeval startwtime, endwtime;
+double seq_time;
+void store_to_file(void);
+void validation();
 /* main */
 int main(int argc, char **argv) {
 
@@ -34,25 +37,28 @@ int main(int argc, char **argv) {
     printf("Problem in args\n");
     exit(1);
   }
-MPI_Init(NULL, NULL); 
+  MPI_Init(NULL, NULL); 
   k = atoi(argv[1]); 
   N = atoi(argv[2]);
   D = atoi(argv[3]);
 
   init();	//initialazation
-  
+  MPI_Barrier(MPI_COMM_WORLD);
+  if( id_p == 0) gettimeofday (&startwtime, NULL);
   knn();
-
-/*
-int i,j;
-FILE *printfile = fopen( "kNresultsarray.txt", "w+");
-  for (i = 0; i < N; i++) {             //check printf
-    for (j = 0; j < k; j++) {
-      fprintf(printfile, "%lf\t",kDist[j][i]);
-    }
-    fprintf(printfile, "\n");
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (id_p == 0) {
+    gettimeofday (&endwtime, NULL);
+    seq_time = (double)((endwtime.tv_usec - startwtime.tv_usec)/1.0e6 + endwtime.tv_sec - startwtime.tv_sec);
+  printf("Knn mpi-unblock wall clock time = %f\n", seq_time);
   }
-*/
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  store_to_file();
+  MPI_Barrier(MPI_COMM_WORLD);
+  if (id_p == (num_p -1)) validation();
+  MPI_Barrier(MPI_COMM_WORLD);
+
 MPI_Finalize();
 
 }
@@ -151,7 +157,16 @@ void init() {		//initialize the data array about distance
 void knn() {
   int i, j, c, e, p, t;
   int next, prev;
-  MPI_Status status;
+  MPI_Request send_request,recv_request;
+  MPI_Status send_status, recv_status;
+
+  next = id_p + 1;
+  prev = id_p - 1;
+  if (id_p == 0) prev = num_p-1;
+  if (id_p == (num_p-1)) next = 0;
+  MPI_Isend(&compMatrix[0][0], chunk*D, MPI_DOUBLE, next, 1, MPI_COMM_WORLD, &send_request);
+  MPI_Irecv(&bufferMatrix[0][0], chunk*D, MPI_DOUBLE, prev, 1, MPI_COMM_WORLD, &recv_request) ;
+
   for(t = 0; t < num_p; t++){
     for(j = 0; j < chunk; j++){
       for(c= 0; c < chunk; c++){
@@ -168,26 +183,17 @@ void knn() {
         }
       }
     }
-    if(t == (num_p-1)) continue;
-    next = id_p + 1;
-    prev = id_p - 1;
-    if (id_p == 0) prev = num_p-1;
-    if (id_p == (num_p-1)) next = 0;
-    if (id_p == 0){
-      MPI_Send(&compMatrix[0][0], chunk*D, MPI_DOUBLE, next, 1, MPI_COMM_WORLD);
-      MPI_Recv(&bufferMatrix[0][0], chunk*D, MPI_DOUBLE, prev, 1, MPI_COMM_WORLD, &status) ;
-    }
-    else{
-      MPI_Recv(&bufferMatrix[0][0], chunk*D, MPI_DOUBLE, prev, 1, MPI_COMM_WORLD, &status) ;
-      MPI_Send(&compMatrix[0][0], chunk*D, MPI_DOUBLE, next, 1, MPI_COMM_WORLD);
-    }
+    MPI_Wait(&send_request,&send_status);
+    MPI_Wait(&recv_request,&recv_status);
+
     for(i = 0; i<chunk; i++) {
       for(j = 0; j<D; j++) {
        compMatrix[i][j] = bufferMatrix[i][j];
-      }
+      } 
     }
 
   }
+
 }
 
 
@@ -211,3 +217,60 @@ void shift(int p,int j){
    kId[i][j] = kId[i-1][j];
  }
 }
+
+
+void store_to_file(){
+  int x;
+  int i,j,z;
+  FILE *fp;
+  MPI_Status status;
+  if(id_p == (num_p -1)){
+    fp = fopen("nkResultsUNblock.txt","w+");
+    for(i = 0; i < num_p - 1; i++){
+      MPI_Recv(&bufferMatrix[0][0], chunk*D, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &status );
+      for(z = 0; z<chunk; z++) {
+        for(j = 0; j<k; j++) {
+          x = fprintf(fp,"%lf\t",bufferMatrix[z][j]);
+        }
+        x = fprintf(fp,"\n");
+      }
+    }
+  }
+  else {
+    MPI_Send(&mainMatrix[0][0], chunk*D, MPI_DOUBLE, (num_p-1), 1, MPI_COMM_WORLD);
+  }
+  
+}
+
+
+void validation(){
+  FILE *fp1 = fopen( "validated.txt", "r" );
+  FILE *fp2 = fopen( "nkResultsUNblock.txt", "r");
+  double d1,d2,dif;
+  double er=0.01;
+  int i,x,y,ok=1;
+  printf("ok\n");
+
+  for(i = 0; i < k*D; i++){
+    x = fscanf(fp1,"%lf", &d1);
+    y = fscanf(fp2,"%lf", &d2);
+    dif=(d1 - d2);
+    if (dif < 0) dif=dif*(-1);
+    if(dif>er){
+      ok = 0;
+      break;
+    }
+  }
+  if(ok){
+    printf("Validation done: PASSed\n");
+  }
+  else {
+    printf("Validation done: FAILed\n");
+  }
+
+  fclose(fp1);
+  fclose(fp2);
+
+
+}
+
