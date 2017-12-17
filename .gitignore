@@ -7,3 +7,6 @@ Project_2/serial_file/nkResultsSerial.txt
 Project_2/serial_file/validated.txt
 Project_2/data/*
 *.swp
+Project2/*.txt
+Project2/serial_file/*.txt
+Project2/parallel/*.txt

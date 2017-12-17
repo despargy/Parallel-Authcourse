@@ -18,7 +18,7 @@ double **kDist;	//array distance of k closer points
 int **kId;	//array id of k closer points
 void init(void);
 void knn(void);
-int binarySearch(int item, int low, int high, int j);
+int binarySearch(double item, int low, int high, int j);
 void shift(int p, int j);
 struct timeval startwtime, endwtime;
 double seq_time;
@@ -73,7 +73,7 @@ void init() {		//initialize the data array about distance
   for(i = 0; i < k; i++) {
     kId[i] = (int *) malloc(N * sizeof(int));
   }
-  FILE *file = fopen( "corpus.txt", "r" );
+  FILE *file = fopen( "mnist_train_svd.txt", "r" );
   for (i = 0; i < N; i++) { 
     for (j = 0; j < D; j++) {
      x = fscanf(file, "%lf", &a[i][j]);
@@ -110,7 +110,7 @@ void knn() {
 }
 
 
-int binarySearch(int item, int low, int high, int j)
+int binarySearch(double item, int low, int high, int j)
 {
     if (high <= low)
       return (item > kDist[low][j])?  (low + 1): low;
@@ -133,7 +133,7 @@ void shift(int p,int j){
 
 
 void validation(){
-  FILE *fp1 = fopen( "validated.txt", "r" );
+  FILE *fp1 = fopen( "validation_mnist_train_svd.txt", "r" );
   FILE *fp2 = fopen( "nkResultsSerial.txt", "r");
   double d1,d2,dif;
   double er=0.00001;
