@@ -23,7 +23,7 @@ double **kDist;	//array distance of k closer points
 int **kId;	//array id of k closer points
 void init(void);
 void knn(void);
-int binarySearch(int item, int low, int high, int j);
+int binarySearch(double item, int low, int high, int j);
 void shift(int p, int j);
 int id_p;
 int num_p;
@@ -122,6 +122,7 @@ void init() {		//initialize the data array about distance
       }
       x = fscanf(infileptr,"\n");
     }
+    fclose(infileptr);
    ////////////
   }  
   else {
@@ -194,7 +195,7 @@ void knn() {
 }
 
 
-int binarySearch(int item, int low, int high, int j)
+int binarySearch(double item, int low, int high, int j)
 {
     if (high <= low)
       return (item > kDist[low][j])?  (low + 1): low;
@@ -215,72 +216,6 @@ void shift(int p,int j){
  }
 }
 
-/*
-void store_to_file(){
-  int x;
-  int i,j,z;
-  FILE *fp;
-  MPI_Status status;
-  if(id_p == (num_p -1)){
-    fp = fopen("testcorpus.txt","w+");
-    for(i = 0; i < num_p - 1; i++){
-      MPI_Recv(&bufferMatrix[0][0], chunk*(D+2), MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &status );
-      for(z = 0; z<chunk; z++) {
-        for(j = 0; j<D; j++) {
-          x = fprintf(fp,"%lf\t",bufferMatrix[z][j]);
-        }
-        x = fprintf(fp,"\n");
-      }
-    }
-    for(z = 0; z<chunk; z++) {
-      for(j = 0; j<D; j++) {
-        x = fprintf(fp,"%lf\t",mainMatrix[z][j]);
-       }
-      x = fprintf(fp,"\n");
-    }
-
-  }
-  else {
-    MPI_Send(&mainMatrix[0][0], chunk*(D+2), MPI_DOUBLE, (num_p-1), 1, MPI_COMM_WORLD);
-  }
-  
-}
-
-
-void validation(){
-  FILE *fp1 = fopen( "corpus.txt", "r" );
-  FILE *fp2 = fopen( "testcorpus.txt", "r");
-  double d1,d2,dif;
-  int count=0,p;
-  double er=0.00;
-  int i,x,y,ok=1;
-  printf("ok\n");
-
-  for(i = 0; i < k*N; i++){
-    x = fscanf(fp1,"%lf", &d1);
-    y = fscanf(fp2,"%lf", &d2);
-    dif=(d1 - d2);
-    if (dif < 0) dif=dif*(-1);
-    if(dif>er){
-      ok = 0;
- //     break;
-      count++;
-    }
-  }
-  if(ok){
-    printf("Validation done: PASSed\n");
-  }
-  else {
-    printf("Validation done: FAILed\n");
-    printf("%d\n",count);
-  }
-
-  fclose(fp1);
-  fclose(fp2);
-
-
-}
-*/
 
 void store_to_file(){
   int x;
@@ -290,7 +225,7 @@ void store_to_file(){
   if(id_p == (num_p -1)){
     fp = fopen("nkResultsBlock.txt","w+");
     for(i = 0; i < num_p - 1; i++){
-      MPI_Recv(&bufferkDist[0][0], chunk*(k), MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &status );
+      MPI_Recv(&bufferkDist[0][0], (chunk+1)*(k)+3, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &status );
       for(z = 0; z<chunk; z++) {
         for(j = 0; j<k; j++) {
           x = fprintf(fp,"%lf\t",bufferkDist[j][z]);
@@ -304,10 +239,10 @@ void store_to_file(){
        }
       x = fprintf(fp,"\n");
     }
-
+    fclose(fp);
   }
   else {
-    MPI_Send(&kDist[0][0], chunk*(k), MPI_DOUBLE, (num_p-1), 1, MPI_COMM_WORLD);
+    MPI_Send(&kDist[0][0], (chunk+1)*(k)+3, MPI_DOUBLE, (num_p-1), 1, MPI_COMM_WORLD);
   }
 
 }
