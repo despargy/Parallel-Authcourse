@@ -18,6 +18,7 @@ int D;
 double **mainMatrix;	//main matrix
 double **compMatrix;	//matrix to help us compaire
 double **bufferMatrix;
+double **bufferkDist;
 double **kDist;	//array distance of k closer points
 int **kId;	//array id of k closer points
 void init(void);
@@ -28,7 +29,7 @@ int id_p;
 int num_p;
 struct timeval startwtime, endwtime;
 double seq_time;
-void store_to_file(void);
+void store_to_file();
 void validation();
 /* main */
 int main(int argc, char **argv) {
@@ -57,6 +58,7 @@ int main(int argc, char **argv) {
   MPI_Barrier(MPI_COMM_WORLD);
   if (id_p == (num_p -1)) validation();
   MPI_Barrier(MPI_COMM_WORLD);
+
 
 MPI_Finalize();
 
@@ -88,11 +90,16 @@ void init() {		//initialize the data array about distance
   for(int i = 0; i < k; i++) {
     kId[i] = (int *) malloc(chunk * sizeof(int));
   }
+  bufferkDist = (double **) malloc(k * sizeof(double*));      //malloc kDist[][]
+  for(int i = 0; i < k; i++) {
+    bufferkDist[i] = (double *) malloc(chunk * sizeof(double));
+  }
+
+
 
   FILE *infileptr;
   int x;
   int i,j,z;
-  double temp=0;
   MPI_Status status;
   if(id_p == (num_p -1)){
     infileptr = fopen("corpus.txt","r");
@@ -105,7 +112,7 @@ void init() {		//initialize the data array about distance
         x = fscanf(infileptr,"\n");
       }
       /////////////
-      MPI_Send(&bufferMatrix[0][0], chunk*D, MPI_DOUBLE, i, 1, MPI_COMM_WORLD);
+      MPI_Send(&bufferMatrix[0][0], chunk*(D+2), MPI_DOUBLE, i, 1, MPI_COMM_WORLD);
     }
 
    //Read from file
@@ -118,7 +125,7 @@ void init() {		//initialize the data array about distance
    ////////////
   }  
   else {
-    MPI_Recv(&mainMatrix[0][0], chunk*D, MPI_DOUBLE, num_p-1, 1, MPI_COMM_WORLD, &status );
+    MPI_Recv(&mainMatrix[0][0], chunk*(D+2), MPI_DOUBLE, num_p-1, 1, MPI_COMM_WORLD, &status );
   }
 
   //initialazation kDist array
@@ -146,14 +153,14 @@ void knn() {
   int i, j, c, e, p, t;
   int next, prev;
   MPI_Status status;
-  for(t = 0; t < num_p; t++){
+  for(t = 0; t < num_p ; t++){
     for(j = 0; j < chunk; j++){
       for(c= 0; c < chunk; c++){
         double dis = 0; 
         for(e = 0; e < D; e++){	//calculate distance in D space
           dis = dis + pow((compMatrix[c][e] - mainMatrix[j][e]),2); 
         }
-        if (dis == 0) continue ;
+        if(j==c && !t) continue;
         if (dis < kDist[k-1][j]){		//sorter than the other k points or not
           p = binarySearch( dis, 0, k, j);	//where to place it
           shift(p,j);	//make space
@@ -165,15 +172,15 @@ void knn() {
     if(t == (num_p-1)) continue;
     next = id_p + 1;
     prev = id_p - 1;
-    if (id_p == 0) prev = num_p-1;
+    if (id_p == 0) prev = (num_p-1);
     if (id_p == (num_p-1)) next = 0;
     if (id_p == 0){
-      MPI_Send(&compMatrix[0][0], chunk*D, MPI_DOUBLE, next, 1, MPI_COMM_WORLD);
-      MPI_Recv(&bufferMatrix[0][0], chunk*D, MPI_DOUBLE, prev, 1, MPI_COMM_WORLD, &status) ;
+      MPI_Send(&compMatrix[0][0], chunk*(D+2), MPI_DOUBLE, next, 1, MPI_COMM_WORLD);
+      MPI_Recv(&bufferMatrix[0][0], chunk*(D+2), MPI_DOUBLE, prev, 1, MPI_COMM_WORLD, &status) ;
     }
     else{
-      MPI_Recv(&bufferMatrix[0][0], chunk*D, MPI_DOUBLE, prev, 1, MPI_COMM_WORLD, &status) ;
-      MPI_Send(&compMatrix[0][0], chunk*D, MPI_DOUBLE, next, 1, MPI_COMM_WORLD);
+      MPI_Recv(&bufferMatrix[0][0], chunk*(D+2), MPI_DOUBLE, prev, 1, MPI_COMM_WORLD, &status) ;
+      MPI_Send(&compMatrix[0][0], chunk*(D+2), MPI_DOUBLE, next, 1, MPI_COMM_WORLD);
     }
     for(i = 0; i<chunk; i++) {
       for(j = 0; j<D; j++) {
@@ -208,6 +215,72 @@ void shift(int p,int j){
  }
 }
 
+/*
+void store_to_file(){
+  int x;
+  int i,j,z;
+  FILE *fp;
+  MPI_Status status;
+  if(id_p == (num_p -1)){
+    fp = fopen("testcorpus.txt","w+");
+    for(i = 0; i < num_p - 1; i++){
+      MPI_Recv(&bufferMatrix[0][0], chunk*(D+2), MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &status );
+      for(z = 0; z<chunk; z++) {
+        for(j = 0; j<D; j++) {
+          x = fprintf(fp,"%lf\t",bufferMatrix[z][j]);
+        }
+        x = fprintf(fp,"\n");
+      }
+    }
+    for(z = 0; z<chunk; z++) {
+      for(j = 0; j<D; j++) {
+        x = fprintf(fp,"%lf\t",mainMatrix[z][j]);
+       }
+      x = fprintf(fp,"\n");
+    }
+
+  }
+  else {
+    MPI_Send(&mainMatrix[0][0], chunk*(D+2), MPI_DOUBLE, (num_p-1), 1, MPI_COMM_WORLD);
+  }
+  
+}
+
+
+void validation(){
+  FILE *fp1 = fopen( "corpus.txt", "r" );
+  FILE *fp2 = fopen( "testcorpus.txt", "r");
+  double d1,d2,dif;
+  int count=0,p;
+  double er=0.00;
+  int i,x,y,ok=1;
+  printf("ok\n");
+
+  for(i = 0; i < k*N; i++){
+    x = fscanf(fp1,"%lf", &d1);
+    y = fscanf(fp2,"%lf", &d2);
+    dif=(d1 - d2);
+    if (dif < 0) dif=dif*(-1);
+    if(dif>er){
+      ok = 0;
+ //     break;
+      count++;
+    }
+  }
+  if(ok){
+    printf("Validation done: PASSed\n");
+  }
+  else {
+    printf("Validation done: FAILed\n");
+    printf("%d\n",count);
+  }
+
+  fclose(fp1);
+  fclose(fp2);
+
+
+}
+*/
 
 void store_to_file(){
   int x;
@@ -217,19 +290,26 @@ void store_to_file(){
   if(id_p == (num_p -1)){
     fp = fopen("nkResultsBlock.txt","w+");
     for(i = 0; i < num_p - 1; i++){
-      MPI_Recv(&bufferMatrix[0][0], chunk*D, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &status );
+      MPI_Recv(&bufferkDist[0][0], chunk*(k), MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &status );
       for(z = 0; z<chunk; z++) {
         for(j = 0; j<k; j++) {
-          x = fprintf(fp,"%lf\t",bufferMatrix[z][j]);
+          x = fprintf(fp,"%lf\t",bufferkDist[j][z]);
         }
         x = fprintf(fp,"\n");
       }
     }
+    for(z = 0; z<chunk; z++) {
+      for(j = 0; j<k; j++) {
+        x = fprintf(fp,"%lf\t",kDist[j][z]);
+       }
+      x = fprintf(fp,"\n");
+    }
+
   }
   else {
-    MPI_Send(&mainMatrix[0][0], chunk*D, MPI_DOUBLE, (num_p-1), 1, MPI_COMM_WORLD);
+    MPI_Send(&kDist[0][0], chunk*(k), MPI_DOUBLE, (num_p-1), 1, MPI_COMM_WORLD);
   }
-  
+
 }
 
 
@@ -237,18 +317,21 @@ void validation(){
   FILE *fp1 = fopen( "validated.txt", "r" );
   FILE *fp2 = fopen( "nkResultsBlock.txt", "r");
   double d1,d2,dif;
-  double er=0.01;
+  int count=0;
+  double er=0.00001;
   int i,x,y,ok=1;
   printf("ok\n");
 
-  for(i = 0; i < k*D; i++){
+  for(i = 0; i < k*N; i++){
     x = fscanf(fp1,"%lf", &d1);
     y = fscanf(fp2,"%lf", &d2);
     dif=(d1 - d2);
     if (dif < 0) dif=dif*(-1);
     if(dif>er){
       ok = 0;
-      break;
+ //     break;
+      count++;
+      printf("%d\n",i);
     }
   }
   if(ok){
@@ -256,6 +339,7 @@ void validation(){
   }
   else {
     printf("Validation done: FAILed\n");
+    printf("%d\n",count);
   }
 
   fclose(fp1);
@@ -263,9 +347,4 @@ void validation(){
 
 
 }
-
-
-
-
-
 

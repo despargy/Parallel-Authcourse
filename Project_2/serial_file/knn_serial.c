@@ -136,7 +136,7 @@ void validation(){
   FILE *fp1 = fopen( "validated.txt", "r" );
   FILE *fp2 = fopen( "nkResultsSerial.txt", "r");
   double d1,d2,dif;
-  double er=0.001;
+  double er=0.00001;
   int i,x,y,ok=1;
   printf("ok\n");
 
