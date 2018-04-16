@@ -1,0 +1,10 @@
+From rank 0 out of 8 processors
+From rank 1 out of 8 processors
+From rank 2 out of 8 processors
+From rank 4 out of 8 processors
+From rank 5 out of 8 processors
+From rank 6 out of 8 processors
+From rank 7 out of 8 processors
+From rank 3 out of 8 processors
+Knn mpi-block wall clock time = 60.777045
+Validation done: PASSed

@@ -1,0 +1,16 @@
+#!/bin/bash
+#PBS -N petros_bl_mpi_n1_p4
+#PBS -q pdlab
+#PBS -j oe
+#PBS -l nodes=1:ppn=4,walltime=1:00:00
+
+cd $PBS_O_WORKDIR
+pwd
+date
+hostname
+export  NP=$(cat  $PBS_NODEFILE  | wc -l)
+export  I2G_MPI_TYPE=mpich2
+export  I2G_MPI_APPLICATION=knn_mpi
+export I2G_MPI_APPLICATION_ARGS='30 60000 30'
+$I2G_MPI_START
+

@@ -11,6 +11,7 @@
 #include <math.h>
 #include <float.h>
 #include <mpi.h>
+
 int k;
 int N;
 int chunk;
@@ -102,7 +103,7 @@ void init() {		//initialize the data array about distance
   int i,j,z;
   MPI_Status status;
   if(id_p == (num_p -1)){
-    infileptr = fopen("mnist_train_svd.txt","r");
+    infileptr = fopen("mnist_train.txt","r");
     for(i = 0; i < num_p - 1; i++){
       //Read from file to buffer instead of freadf()
       for(z = 0; z<chunk; z++) {
@@ -249,7 +250,7 @@ void store_to_file(){
 
 
 void validation(){
-  FILE *fp1 = fopen( "validation_mnist_train_svd.txt", "r" );
+  FILE *fp1 = fopen( "validation_mnist_train.txt", "r" );
   FILE *fp2 = fopen( "nkResultsBlock.txt", "r");
   double d1,d2,dif;
   int count=0;

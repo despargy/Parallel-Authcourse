@@ -1,0 +1,15 @@
+#!/bin/bash
+#PBS -N testjob
+#PBS -q auth
+#PBS -j oe
+#PBS -l nodes=8:ppn=4
+cd $PBS_O_WORKDIR  
+pwd 
+date 
+hostname
+export  NP=$(cat  $PBS_NODEFILE  | wc -l) 
+export  I2G_MPI_TYPE=mpich2  
+export  I2G_MPI_APPLICATION=knn_mpi 
+export I2G_MPI_APPLICATION_ARGS='30 60000 30'
+$I2G_MPI_START
+

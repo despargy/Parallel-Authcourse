@@ -2,7 +2,7 @@
 	Parallel computing
   Project 2,HMMY Nov 2017
   Despina-Ekaterini Argiropoulos        8491
-  UNBLOCK- Parallel
+  BLOCK- Parallel- SVD txt
 */
 
 #include <stdio.h>
@@ -11,6 +11,7 @@
 #include <math.h>
 #include <float.h>
 #include <mpi.h>
+
 int k;
 int N;
 int chunk;
@@ -31,6 +32,7 @@ struct timeval startwtime, endwtime;
 double seq_time;
 void store_to_file();
 void validation();
+int threads_count=2;
 /* main */
 int main(int argc, char **argv) {
 
@@ -102,7 +104,7 @@ void init() {		//initialize the data array about distance
   int i,j,z;
   MPI_Status status;
   if(id_p == (num_p -1)){
-    infileptr = fopen("mnist_train.txt","r");
+    infileptr = fopen("mnist_train_svd.txt","r");
     for(i = 0; i < num_p - 1; i++){
       //Read from file to buffer instead of freadf()
       for(z = 0; z<chunk; z++) {
@@ -153,18 +155,9 @@ void init() {		//initialize the data array about distance
 void knn() {
   int i, j, c, e, p, t;
   int next, prev;
-  MPI_Request req[2];// send_request,recv_request;
-  MPI_Status stat[2];// send_status, recv_status;
-
-  next = id_p + 1;
-  prev = id_p - 1;
-  if (id_p == 0) prev = num_p-1;
-  if (id_p == (num_p-1)) next = 0;
-
+  MPI_Status status;
   for(t = 0; t < num_p ; t++){
-  MPI_Isend(&compMatrix[0][0], chunk*(D+2), MPI_DOUBLE, next, 1, MPI_COMM_WORLD, &req[0]);
-  MPI_Irecv(&bufferMatrix[0][0], chunk*(D+2), MPI_DOUBLE, prev, 1, MPI_COMM_WORLD, &req[1]) ;
-    for(j = 0; j < chunk; j++){
+   for(j = 0; j < chunk; j++){
       for(c= 0; c < chunk; c++){
         double dis = 0; 
         for(e = 0; e < D; e++){	//calculate distance in D space
@@ -179,7 +172,19 @@ void knn() {
         }
       }
     }
-    MPI_Waitall(2,req,stat);
+    if(t == (num_p-1)) continue;
+    next = id_p + 1;
+    prev = id_p - 1;
+    if (id_p == 0) prev = (num_p-1);
+    if (id_p == (num_p-1)) next = 0;
+    if (id_p == 0){
+      MPI_Send(&compMatrix[0][0], chunk*(D+2), MPI_DOUBLE, next, 1, MPI_COMM_WORLD);
+      MPI_Recv(&bufferMatrix[0][0], chunk*(D+2), MPI_DOUBLE, prev, 1, MPI_COMM_WORLD, &status) ;
+    }
+    else{
+      MPI_Recv(&bufferMatrix[0][0], chunk*(D+2), MPI_DOUBLE, prev, 1, MPI_COMM_WORLD, &status) ;
+      MPI_Send(&compMatrix[0][0], chunk*(D+2), MPI_DOUBLE, next, 1, MPI_COMM_WORLD);
+    }
     for(i = 0; i<chunk; i++) {
       for(j = 0; j<D; j++) {
        compMatrix[i][j] = bufferMatrix[i][j];
@@ -220,9 +225,9 @@ void store_to_file(){
   FILE *fp;
   MPI_Status status;
   if(id_p == (num_p -1)){
-    fp = fopen("nkResultsUNblock.txt","w+");
+    fp = fopen("nkResultsBlock_svd.txt","w+");
     for(i = 0; i < num_p - 1; i++){
-      MPI_Recv(&bufferkDist[0][0], (chunk+1)*(k)+3*k/5+10, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &status );
+      MPI_Recv(&bufferkDist[0][0], (chunk+1)*k+3*k/5+10, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &status );
       for(z = 0; z<chunk; z++) {
         for(j = 0; j<k; j++) {
           x = fprintf(fp,"%lf\t",bufferkDist[j][z]);
@@ -239,20 +244,20 @@ void store_to_file(){
     fclose(fp);
   }
   else {
-    MPI_Send(&kDist[0][0], (chunk+1)*(k)+3*k/5+10, MPI_DOUBLE, (num_p-1), 1, MPI_COMM_WORLD);
+    MPI_Send(&kDist[0][0], (chunk+1)*k+3*k/5+10, MPI_DOUBLE, (num_p-1), 1, MPI_COMM_WORLD);
   }
 
 }
 
 
 void validation(){
-  FILE *fp1 = fopen( "validation_mnist_train.txt", "r" );
-  FILE *fp2 = fopen( "nkResultsUNblock.txt", "r");
+  FILE *fp1 = fopen( "validation_mnist_train_svd.txt", "r" );
+  FILE *fp2 = fopen( "nkResultsBlock_svd.txt", "r");
   double d1,d2,dif;
   int count=0;
   double er=0.00001;
   int i,x,y,ok=1;
-  printf("ok\n");
+//  printf("ok\n");
 
   for(i = 0; i < k*N; i++){
     x = fscanf(fp1,"%lf", &d1);

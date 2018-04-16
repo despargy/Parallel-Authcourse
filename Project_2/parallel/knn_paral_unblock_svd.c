@@ -102,7 +102,7 @@ void init() {		//initialize the data array about distance
   int i,j,z;
   MPI_Status status;
   if(id_p == (num_p -1)){
-    infileptr = fopen("mnist_train.txt","r");
+    infileptr = fopen("mnist_train_svd.txt","r");
     for(i = 0; i < num_p - 1; i++){
       //Read from file to buffer instead of freadf()
       for(z = 0; z<chunk; z++) {
@@ -220,7 +220,7 @@ void store_to_file(){
   FILE *fp;
   MPI_Status status;
   if(id_p == (num_p -1)){
-    fp = fopen("nkResultsUNblock.txt","w+");
+    fp = fopen("nkResultsUNblock_svd.txt","w+");
     for(i = 0; i < num_p - 1; i++){
       MPI_Recv(&bufferkDist[0][0], (chunk+1)*(k)+3*k/5+10, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &status );
       for(z = 0; z<chunk; z++) {
@@ -246,8 +246,8 @@ void store_to_file(){
 
 
 void validation(){
-  FILE *fp1 = fopen( "validation_mnist_train.txt", "r" );
-  FILE *fp2 = fopen( "nkResultsUNblock.txt", "r");
+  FILE *fp1 = fopen( "validation_mnist_train_svd.txt", "r" );
+  FILE *fp2 = fopen( "nkResultsUNblock_svd.txt", "r");
   double d1,d2,dif;
   int count=0;
   double er=0.00001;
